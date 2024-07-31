@@ -1,0 +1,25 @@
+.container {
+    display: flex; /* Sử dụng Flexbox */
+    height: auto; /* Chiều cao cả màn hình */
+}
+
+.left-panel {
+    flex: 1; /* Chia đều không gian giữa hai panel */
+    overflow-y: auto; /* Thêm thanh cuộn theo chiều dọc khi cần thiết */
+    
+}
+
+.right-panel {
+    flex: 1; /* Chia đều không gian giữa hai panel */
+} 
+
+.main-video {
+    display: flex; /* Sử dụng Flexbox */
+    align-items: center; /* Canh giữa theo chiều dọc */
+    justify-content: center; /* Canh giữa theo chiều ngang */
+    height: 100%; /* Chiều cao 100% của panel */
+}
+
+.video {
+    max-width: 100%; /* Video sẽ có chiều rộng tối đa 100% của panel */
+}

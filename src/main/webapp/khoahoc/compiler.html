@@ -1,0 +1,157 @@
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
+    <title>Online Compiler</title>
+    <style>
+        #iconListToggle {
+            position: absolute;
+            top: 20px; /* Khoảng cách từ biểu tượng đến thanh trên màn hình */
+            right: 20px; /* Khoảng cách từ biểu tượng đến cạnh phải màn hình */
+            z-index: 9999; /* Đảm bảo biểu tượng hiển thị trên các phần tử khác */
+        }
+    </style>
+</head>
+
+<body>
+        <h2>Compiler<sub></h2>
+            
+    <h4>Language</h4>
+    <select id="lang" class="btn btn-secondary">
+        <option>Bash</option>
+        <option>C#</option>
+        <option >C++</option>
+        <option>C</option>
+        <option>Java</option>
+        <option selected>Python</option>
+        <option>Ruby</option>
+    </select>
+
+    <h4>Source Code</h4>
+    <textarea id="source" style="width: 100%; height: 200px; resize: vertical; border-radius: 10px;background-color: rgba(227, 224, 224, 0.24)">
+
+    </textarea>
+  
+
+    <h4>Input</h4>
+    <textarea id="input" style="width: 100%; height: 100px; resize: vertical; border-radius: 10px; background-color: rgba(227, 224, 224, 0.24)"></textarea>
+
+    </br></br>
+    <button id="run" class="btn btn-primary" onclick="run()" style="width: 100%;">Run</button>,<br>
+
+    <textarea id="output" style="width: 100%; height: 200px; resize: vertical; border-radius: 10px; background-color: rgba(227, 224, 224, 0.24)"></textarea>
+
+    <script type="text/javascript">
+        API_KEY = "683908e7eamsh234edc1aa787325p1ce26ejsn93bb76b08b14"; // Get yours for free at https://judge0.com/ce or https://judge0.com/extra-ce
+
+        var language_to_id = {
+            "Bash": 46,
+            "C": 50,
+            "C#": 51,
+            "C++": 54,
+            "Java": 62,
+            "Python": 71,
+            "Ruby": 72
+        };
+
+        function encode(str) {
+            return btoa(unescape(encodeURIComponent(str || "")));
+        }
+
+        function decode(bytes) {
+            var escaped = escape(atob(bytes || ""));
+            try {
+                return decodeURIComponent(escaped);
+            } catch {
+                return unescape(escaped);
+            }
+        }
+
+        function errorHandler(jqXHR, textStatus, errorThrown) {
+            $("#output").val(`${JSON.stringify(jqXHR, null, 4)}`);
+            $("#run").prop("disabled", false);
+        }
+
+        function check(token) {
+            $("#output").val($("#output").val() + "\n⏬ Checking submission status...");
+            $.ajax({
+                url: `https://judge0-ce.p.rapidapi.com/submissions/${token}?base64_encoded=true`,
+                type: "GET",
+                headers: {
+                    "x-rapidapi-host": "judge0-ce.p.rapidapi.com",
+	                "x-rapidapi-key": API_KEY
+                },
+                success: function (data, textStatus, jqXHR) {
+                    if ([1, 2].includes(data["status"]["id"])) {
+                        $("#output").val($("#output").val() + "\nℹ️ Status: " + data["status"]["description"]);
+                        setTimeout(function() { check(token) }, 1000);
+                    }
+                    else {
+                        var output = [decode(data["compile_output"]), decode(data["stdout"])].join("\n").trim();
+                        $("#output").val(`${data["status"]["id"] != "3" ? "🔴" : "🟢"} ${data["status"]["description"]}\n${output}`);
+                        $("#run").prop("disabled", false);
+                    }
+                },
+                error: errorHandler
+            });
+        }
+
+        function run() {
+            $("#run").prop("disabled", true);
+            $("#output").val("⚙️ Creating submission...");
+
+            let encodedExpectedOutput = encode($("#expected-output").val());
+            if (encodedExpectedOutput === "") {
+                encodedExpectedOutput = null; // Assume that user does not want to use expected output if it is empty.
+            }
+
+            $.ajax({
+                url: "https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=true&wait=false",
+                type: "POST",
+                contentType: "application/json",
+                headers: {
+                    "x-rapidapi-host": "judge0-ce.p.rapidapi.com",
+	                "x-rapidapi-key": API_KEY
+                },
+                data: JSON.stringify({
+                    "language_id": language_to_id[$("#lang").val()],
+                    "source_code": encode($("#source").val()),
+                    "stdin": encode($("#input").val()),
+                    "expected_output": encodedExpectedOutput,
+                    "redirect_stderr_to_stdout": true
+                }),
+                success: function(data, textStatus, jqXHR) {
+                    $("#output").val($("#output").val() + "\n🎉 Submission created.");
+                    setTimeout(function() { check(data["token"]) }, 2000);
+                },
+                error: errorHandler
+            });
+        }
+
+        $("body").keydown(function (e) {
+            if (e.ctrlKey && e.keyCode == 13) {
+                run();
+            }
+        });
+
+        $("textarea").keydown(function (e) {
+            if (e.keyCode == 9) {
+                e.preventDefault();
+                var start = this.selectionStart;
+                var end = this.selectionEnd;
+
+                var append = "    ";
+                $(this).val($(this).val().substring(0, start) + append + $(this).val().substring(end));
+
+                this.selectionStart = this.selectionEnd = start + append.length;
+            }
+        });
+
+        $("#source").focus();
+    </script>
+    
+    
+</body>
